@@ -1,0 +1,18 @@
+#!/bin/bash
+
+SET_ENV=/home/oracle/app/middleware/wlserver_10.3/server/bin
+WLS_LIB=$HOME/lib/wlst/
+
+. $SET_ENV/setWLSEnv.sh &> /dev/null
+
+if [ "$1" = "" ];
+then
+  COMMAND=$WLS_LIB/wlsInit.py
+  PARAM=-i
+else
+  COMMAND=$1
+  PARAM=""
+fi
+
+
+java org.python.util.jython $PARAM $COMMAND $HOME

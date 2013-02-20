@@ -1,0 +1,88 @@
+# !/bin/bash
+
+########
+# Requirements:
+# * subversion
+# * rsync
+# * export SVN_EDITOR=vi
+
+
+## CHECK THE FOLLOWING DIRECTORIES ##
+MIDDLEWARE_HOME=/home/oracle/app/middleware
+DOMAIN_HOME=$MIDDLEWARE_HOME/user_projects/domains/content_domain
+CS_CACHE=$HOME/cs_custom/
+SVN_URL=https://192.168.90.1/svn/ucmsandbox/translation/components
+SVN_USER=vnp
+
+## These directories should'nt need changes
+CS_CUSTOM=$DOMAIN_HOME/ucm/cs/custom/
+RSYNC_OPT='-avru --exclude=.svn'
+CMD_FROMUCM="fromucm"
+CMD_FROMSVN="fromsvn"
+DELETE_OPT="--delete"
+
+# Application variables
+DELETE_TO_CACHE=""
+DELETE_TO_UCM=""
+
+## SCRIPT ##
+
+updateFromSvn(){
+    if [ $(ls -lA | wc -l) -eq 0 ] 
+    then
+        echo "Doing checkout because directory is empty"
+        svn checkout --username $SVN_USER $SVN_URL ./
+    else
+        echo "Updating"
+        svn update
+    fi
+}
+
+syncCache(){
+    # Sync components from content to cache
+    echo "Syncing to cache"
+    rsync -v $DELETE_TO_CACHE $RSYNC_OPT $CS_CUSTOM $CS_CACHE
+    rm -f $CS_CACHE/lockwait.dat #This file we don't want to sync back
+}
+
+commitSvn(){
+    # check differences with SVN
+    if [ $(svn status | wc -l ) -ne 0 ] 
+    then
+        echo "There where changes done to the component from the server commiting to SVN"
+        svn status | grep ^\! | awk '{print $2}' | xargs svn delete --force
+        svn status | grep ^\? | awk '{print $2}' | xargs svn add
+        svn commit
+    fi
+}
+
+syncUcm(){
+    # Sync componets from cache to content
+    echo "Syncing from cache"
+    rsync $DELETE_TO_UCM $RSYNC_OPT $CS_CACHE $CS_CUSTOM
+}
+
+cd $CS_CACHE
+
+# Parameter desides on deletion rules of rsync
+case "$1" in
+    "$CMD_FROMUCM")
+    DELETE_TO_CACHE=$DELETE_OPT
+    syncCache
+    commitSvn
+    ;;
+
+    "$CMD_FROMSVN")
+    DELETE_TO_UCM=$DELETE_OPT
+    updateFromSvn
+    syncUcm
+    ;;
+
+    *)
+    echo "Please supply $CMD_FROMUCM or $CMD_FROMSVN"
+    exit 0
+    ;;
+
+esac
+
+

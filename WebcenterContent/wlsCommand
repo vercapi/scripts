@@ -1,0 +1,40 @@
+#!/bin/bash
+
+
+MIDDLEWARE_HOME=/home/oracle/app/middleware
+WLS_HOME=$MIDDLEWARE_HOME/wlserver_10.3
+DOMAIN_HOME=$MIDDLEWARE_HOME/user_projects/domains/content_domain
+LOG_DIR=$HOME/log
+SET_ENV=$MIDDLEWARE_HOME/wlserver_10.3/server/bin
+WLS_LIB=$HOME/lib/wlst/
+
+startWL()
+{
+  #Start nodemanager
+  nohup $WLS_HOME/server/bin/startNodeManager.sh &> $LOG_DIR/nodeManager.log &
+  #Start wls server for content_domain
+  nohup $DOMAIN_HOME/startWebLogic.sh &> $LOG_DIR/wlsStartup.log &
+}
+
+stopWL()
+{
+  . $SET_ENV/setWLSEnv.sh &> /dev/null
+  java weblogic.WLST $HOME/lib/wlst/stopRunningServers.py
+  #Stop weblogic
+  nohup $DOMAIN_HOME/bin/stopWebLogic.sh &> $LOG_DIR/wlsShutdown.log &
+  #Stop nodemanager
+  nid=$(fuser -4 5556/tcp 2> /dev/null | grep -o [0-9]*$)
+  echo ID: $nid
+  kill -9 $nid
+}
+
+case "$1" in
+  'start')
+    startWL
+    ;;
+   
+  'stop')
+    stopWL
+    ;;
+    
+esac

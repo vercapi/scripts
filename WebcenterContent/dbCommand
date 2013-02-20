@@ -1,0 +1,13 @@
+#!/bin/bash
+
+action=$1
+action2=$1
+if [ "$1" == "stop" ]
+then
+  action2="shut"
+fi
+
+ORACLE_BIN=$ORACLE_HOME/bin
+
+$ORACLE_BIN/lsnrctl $action
+$ORACLE_BIN/db$action2 $ORACLE_SID
